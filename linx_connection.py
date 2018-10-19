@@ -4,7 +4,7 @@ import serial
 import logging
 
 
-def parseResponse(bts: bytes, dict=dict):
+def parse_response(bts: bytes, dict=dict):
     res = dict()
     res['datasize'] = int(bts[1])
     res['packetNum'] = int(bts[2]) * 8 + int(bts[3])
@@ -32,7 +32,8 @@ def make_packet(**dct):
 
 class LinxConnection(serial.Serial):
     xmethods = {'sync': {'no': 0x0000,
-                         'bts_num': 0},
+                         'bts_num': 0,
+                         'doc': 'Send sync packet'},
                 'getDeviceId': {'no': 0x0003,
                                 'bts_num': 0},
                 'getLinxApiV': {'no': 0x0004,
@@ -51,13 +52,15 @@ class LinxConnection(serial.Serial):
     def recv_raw(self):
         packet = self.read(2)
         packet += self.read(int(packet[1]) - 2)
+        logging.debug('Received "%s"' % packet)
         return packet
 
     def recv(self, dict=dict):
-        return parseResponse(self.recv_raw(), dict)
+        return parse_response(self.recv_raw(), dict)
 
     def send_raw(self, packet: bytes):
         self.write(packet)
+        logging.debug('Sent "%s"' % packet)
         return len(packet)
 
     def send(self, **kwargs):
@@ -74,7 +77,7 @@ class LinxConnection(serial.Serial):
         return res
 
 
-def make_method(method: str, no: int, bts_num: int):
+def make_method(method: str, no: int, bts_num: int, doc: str=None):
     def inner(self, *args):
         nonlocal method, no, bts_num
         data = bytes(args)
@@ -85,8 +88,12 @@ def make_method(method: str, no: int, bts_num: int):
         res = self.send_cmd(method, data)
         return res
     inner.__name__ = method
-    inner.__doc__ = 'This is automatically genetated by make_method %s'\
-                    'method for LinxConnection class' % method
+    if doc is None:
+        inner.__doc__ = 'This is automatically genetated by make_method %s '\
+                        'method for LinxConnection class' % method
+    else:
+        inner.__doc__ = 'This is automatically genetated by make_method %s '\
+                        'method for LinxConnection class\n\n%s' % (method, doc)
     return inner
 
 
