@@ -1,0 +1,24 @@
+sync:
+  no: 0x0000
+  bts_num: 0
+  doc: Send sync packet
+getDeviceId:
+  no: 0x0003
+  bts_num: 0
+  doc: Get device ID
+getLinxApiV:
+  no: 0x0004
+  bts_num: 0
+  doc: Get Linx API version
+getUartMaxBaud:
+  no: 0x0005
+  bts_num: 0
+  doc: Get UART max baud
+setUartMaxBaud:
+  no: 0x0006
+  bts_num: 4
+  doc: Set UART max baud (requires 4 bytes)
+AnalogRead:
+  no: 0x0064
+  bts_num: null
+  doc: Read from analog channels (requires list of integers - numbers of channels)
