@@ -4,12 +4,18 @@ import serial
 import logging
 from time import sleep
 import ruamel.yaml as yaml
+import threading as thr
 
 
-def parse_response(bts: bytes, dict=dict):
-    res = dict()
+def transform(data):
+    return (5 * ((data['data'][2] << 8) + data['data'][1]) /
+            (2 ** data['data'][0]))
+
+
+def parse_response(bts: bytes):
+    res = {}
     res['datasize'] = int(bts[1])
-    res['packetNum'] = int(bts[2]) << 8 + int(bts[3])
+    res['packetNum'] = (int(bts[2]) << 8) + int(bts[3])
     res['status'] = int(bts[4])
     res['data'] = bts[5:-1]
     res['checksum'] = int(bts[-1])
@@ -34,27 +40,31 @@ def make_packet(**dct):
 
 
 class LinxConnection(serial.Serial):
-    xmethods = yaml.load(open('xmethods.yaml', 'rt'))
+    try:
+        xmethods = yaml.load(open('xmethods.yaml', 'rt'), Loader=yaml.Loader)
+    except FileNotFoundError:
+        logging.warning('File "xmethods.yaml" doesn\'t exist. '
+                        'LinxConnection.xmethods are set to {}')
+        xmethods = {}
 
-    def __init__(self, **kwargs):
+    def __init__(self, port='COM3', baudrate=9600, **kwargs):
         self.packetNum = 0
-        serial_kwargs = dict(port='COM3', baudrate=9600)
-        serial_kwargs.update(kwargs)
-        serial.Serial.__init__(self, **serial_kwargs)
+        self.access_lock = thr.Lock()
+        serial.Serial.__init__(self, port=port, baudrate=baudrate, **kwargs)
         sleep(2)
 
     def recv_raw(self, **kwargs):
         packet = self.read(2, **kwargs)
         packet += self.read(int(packet[1]) - 2, **kwargs)
-        logging.debug('Received "%s"' % packet)
+        logging.debug('Received %s' % packet)
         return packet
 
-    def recv(self, dict=dict, **kwargs):
-        return parse_response(self.recv_raw(**kwargs), dict)
+    def recv(self, **kwargs):
+        return parse_response(self.recv_raw(**kwargs))
 
     def send_raw(self, packet: bytes):
         num = self.write(packet)
-        logging.debug('Sent "%s"' % packet)
+        logging.debug('Sent %s' % packet)
         if num != len(packet):
             logging.warn('write(packet) returned int != len(packet)')
         return num
@@ -74,15 +84,18 @@ class LinxConnection(serial.Serial):
 
 
 def make_method(method: str, no: int, bts_num: int, doc: str=None):
-    def inner(self, dict=dict, *args, **kwargs):
+    def inner(self, *args, **kwargs):
         nonlocal method, no, bts_num
         data = bytes(args)
         if bts_num is not None and len(data) != bts_num:
             logging.warn('In method "%s": wrong number of argument bytes '
                          '(got %i, nedded %i)' %
                          (method, len(data), bts_num))
+        self.access_lock.acquire()
         self.send_cmd(method, data)
-        return self.recv(dict, **kwargs)
+        res = self.recv(**kwargs)
+        self.access_lock.release()
+        return res
     inner.__name__ = method
     if doc is None:
         inner.__doc__ = 'This is automatically genetated by make_method %s '\

@@ -2,7 +2,7 @@ sync:
   no: 0x0000
   bts_num: 0
   doc: Send sync packet
-getDeviceId:
+getDevId:
   no: 0x0003
   bts_num: 0
   doc: Get device ID
@@ -18,6 +18,18 @@ setUartMaxBaud:
   no: 0x0006
   bts_num: 4
   doc: Set UART max baud (requires 4 bytes)
+getDevMaxBaud:
+  no: 0x0023
+  bts_num: 0
+  doc: Get device max baud
+DigitalWrite:
+  no: 0x0041
+  bts_num: null
+  doc: Write to digital channels (requires two lists of integers - channels and values)
+DigitalRead:
+  no: 0x0042
+  bts_num: null
+  doc: Read from digital channels (requires list of integers - channels)
 AnalogRead:
   no: 0x0064
   bts_num: null
