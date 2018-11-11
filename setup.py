@@ -7,7 +7,7 @@ with open('README.md', 'r') as fh:
 
 setuptools.setup(
     name='linx_connection',
-    version='0.0.1',
+    version='0.0.2',
     author='Andrew Anderson',
     author_email='andrew-anderson.neo@yandex.ru',
     description='Module for talking to Arduino by serial port',
@@ -22,5 +22,5 @@ setuptools.setup(
             'GNU General Public License v3 or later (GPLv3+)',
         'Operating System :: OS Independent',
     ),
-    install_requires=['serial', 'ruamel.yaml']
+    install_requires=['pyserial', 'ruamel.yaml']
 )
